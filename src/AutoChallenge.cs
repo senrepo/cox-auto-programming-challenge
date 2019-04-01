@@ -18,8 +18,7 @@ namespace src
         public async Task<Status> Execute()
         {
             var dataset = await GetDataSet();
-            var vehicles = await GetVehicles(dataset);
-            var dealers = await GetDealers(dataset, vehicles);
+            var dealers = await GetAllDealersWithVehicles(dataset);
             var status = await SubmitAutoChallenge(dataset, dealers);
             return status;
         }
@@ -30,69 +29,55 @@ namespace src
             return dataset;
         }
 
-        private async Task<List<Vehicle>> GetVehicles(DataSet dataset)
+        private async Task<List<Dealer>> GetAllDealersWithVehicles(DataSet dataset)
         {
-            var vehicleList = new List<Vehicle>();
-            var taskList = new List<Task<Vehicle>>();
+            var dealers = new ConcurrentDictionary<int, Dealer>();
+            var dealerList = new List<Dealer>();
+
+            var taskList = new List<Task>();
             var vehicles = await client.Get<Vehicles>(Configuration.GetVehiclesUrl(dataset.DataSetId));
 
-            foreach (var id in vehicles.VehicleIds)
+            //iterate the vehicle ids
+            foreach (var vehId in vehicles.VehicleIds)
             {
-                Task<Vehicle> task = Task.Factory.StartNew((vehId) =>
+                Task task = Task.Factory.StartNew((id) =>
                 {
-                    var vehicle = client.Get<Vehicle>(Configuration.GetVehicleUrl(dataset.DataSetId, id));
-                    return vehicle.Result;
-                }, id);
+                    //get the vehicle with vehid
+                    var vehicle = client.Get<Vehicle>(Configuration.GetVehicleUrl(dataset.DataSetId, (int)id)).Result;
+
+                    // //check if the dealer exists
+                    // if (!dealers.TryGetValue(vehicle.DealerId, out Dealer dealer))
+                    // {
+                    //       dealer = client.Get<Dealer>(Configuration.GetDealerUrl(dataset.DataSetId, vehicle.DealerId)).Result;  
+                    // }
+
+                    var dealer = client.Get<Dealer>(Configuration.GetDealerUrl(dataset.DataSetId, vehicle.DealerId)).Result; 
+                    //update the vehicle to the dealer
+                    dealer.Vehicles.Add(vehicle);
+
+                    //add the dealer back to the dealers collection
+                    dealers.AddOrUpdate(dealer.DealerId, dealer, (key, existing) =>
+                    {
+                        existing.Vehicles.Add(vehicle);
+                        return existing;
+                    });
+
+                }, vehId);
 
                 taskList.Add(task);
             }
 
-            while (taskList.Count > 0)
-            {
-                int i = Task.WaitAny(taskList.ToArray());
-                try
-                {
-                    var vehicle = taskList[i].Result;
-                    vehicleList.Add(vehicle);
-                }
-                catch (AggregateException ae)
-                {
-                    ae = ae.Flatten();
-                    Console.WriteLine(ae.ToString());
-                }
-                taskList.RemoveAt(i);
-            }
-
-            return vehicleList;
-        }
-
-        private async Task<List<Dealer>> GetDealers(DataSet dataset, List<Vehicle> vehicles)
-        {
-            var dealers = new Dictionary<int, Dealer>();
-            var dealerList = new List<Dealer>();
-
-            foreach (var vehicle in vehicles)
-            {
-                if (dealers.ContainsKey(vehicle.DealerId))
-                {
-                    dealers[vehicle.DealerId].Vehicles.Add(vehicle);
-                }
-                else
-                {
-                    var dealer = client.Get<Dealer>(Configuration.GetDealerUrl(dataset.DataSetId, vehicle.DealerId)).Result;
-                    dealer.Vehicles.Add(vehicle);
-                    dealers.TryAdd(dealer.DealerId, dealer);
-                }
-            }
+            Task.WaitAll(taskList.ToArray());
 
             foreach (var item in dealers.Values) dealerList.Add(item);
             return dealerList;
+
         }
 
-           private async Task<Status> SubmitAutoChallenge(DataSet dataset, List<Dealer> dealers)
-           {
-               var status = await client.Post<RequestPayLoad,Status>(Configuration.PostAutoChallenge(dataset.DataSetId), new RequestPayLoad(dealers));
-               return status;
-           }
+        private async Task<Status> SubmitAutoChallenge(DataSet dataset, List<Dealer> dealers)
+        {
+            var status = await client.Post<RequestPayLoad, Status>(Configuration.PostAutoChallenge(dataset.DataSetId), new RequestPayLoad(dealers));
+            return status;
+        }
     }
 }
