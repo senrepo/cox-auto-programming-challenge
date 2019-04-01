@@ -14,6 +14,6 @@ namespace src.Model
         [JsonProperty("model")]
         public string Model { get; set; }
         [JsonProperty("dealerId")]
-        public string DealerId { get; set; }
+        public int DealerId { get; set; }
     }
 }
