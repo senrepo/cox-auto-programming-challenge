@@ -2,13 +2,14 @@ using System;
 using Newtonsoft.Json;
 using src;
 using src.Model;
+using src.Client;
 using Xunit;
 
 namespace auto_challenge_tests
 {
     public class RestHttpClientTests
     {
-         RestHttpClient client = new RestHttpClient();
+         IRestHttpClient client = new RestHttpClient();
 
         [Fact]
         public async void Test_DataSet_Get()

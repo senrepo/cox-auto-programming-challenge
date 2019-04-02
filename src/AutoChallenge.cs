@@ -3,12 +3,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using src.Model;
+using src.Client;
 
 namespace src
 {
-    public class AutoChallenge
+    public class AutoChallenge : IChallenge
     {
-        private readonly RestHttpClient client = null;
+        private readonly IRestHttpClient client = null;
 
         public AutoChallenge()
         {
@@ -70,5 +71,6 @@ namespace src
             var status = await client.Post<RequestPayLoad, Status>(Configuration.PostAutoChallenge(dataset.DataSetId), new RequestPayLoad(dealers));
             return status;
         }
+
     }
 }

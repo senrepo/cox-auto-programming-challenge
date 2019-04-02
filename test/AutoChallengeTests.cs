@@ -2,6 +2,7 @@ using System;
 using Newtonsoft.Json;
 using src;
 using src.Model;
+using src.Client;
 using Xunit;
 
 namespace test
@@ -13,11 +14,12 @@ namespace test
         [Fact]
         public async void Test_Execute()
         {
-            var auto = new AutoChallenge();
+            IChallenge auto = new AutoChallenge();
             var status =  await auto.Execute();
 
             Assert.Equal("Congratulations.", status.Message);
             Assert.Equal("true", status.Success);
+            Assert.True(status.MilliSeconds > 0);
            
         }
     }

@@ -12,8 +12,8 @@ namespace auto_challenge
             Console.Clear();
             Console.WriteLine("Program Started, Please wait..");
 
-            var auto = new AutoChallenge();
-            var status = auto.Execute().Result;
+            IChallenge autoChallenge = new AutoChallenge();
+            var status = autoChallenge.Execute().Result;
 
             Console.WriteLine($"Message: {status.Message}");
             Console.WriteLine($"Success: {status.Success}");

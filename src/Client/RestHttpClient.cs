@@ -4,13 +4,15 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace src
+namespace src.Client
 {
-    public class RestHttpClient
-    {
-        public static HttpClient httpClient = null;
 
-        public async Task<T> Get<T>(string url)
+
+    public class RestHttpClient : IRestHttpClient
+    {
+        protected static HttpClient httpClient = null;
+
+        public virtual async Task<T> Get<T>(string url)
         {
             try
             {
@@ -30,7 +32,7 @@ namespace src
             }
         }
 
-        public async Task<T2> Post<T1, T2>(string url, T1 request)
+        public virtual async Task<T2> Post<T1, T2>(string url, T1 request)
         {
             try
             {
@@ -50,7 +52,7 @@ namespace src
                 Console.WriteLine(ex.ToString());
                 throw ex;
             }
-        }        
+        }
 
         private HttpClient GetHttpClient()
         {
