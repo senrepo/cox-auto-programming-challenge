@@ -37,26 +37,18 @@ namespace src
             var taskList = new List<Task>();
             var vehicles = await client.Get<Vehicles>(Configuration.GetVehiclesUrl(dataset.DataSetId));
 
-            //iterate the vehicle ids
             foreach (var vehId in vehicles.VehicleIds)
             {
                 Task task = Task.Factory.StartNew((id) =>
                 {
-                    //get the vehicle with vehid
                     var vehicle = client.Get<Vehicle>(Configuration.GetVehicleUrl(dataset.DataSetId, (int)id)).Result;
 
-                    // //check if the dealer exists
-                    // if (!dealers.TryGetValue(vehicle.DealerId, out Dealer dealer))
-                    // {
-                    //       dealer = client.Get<Dealer>(Configuration.GetDealerUrl(dataset.DataSetId, vehicle.DealerId)).Result;  
-                    // }
-
-                    var dealer = client.Get<Dealer>(Configuration.GetDealerUrl(dataset.DataSetId, vehicle.DealerId)).Result; 
-                    //update the vehicle to the dealer
-                    dealer.Vehicles.Add(vehicle);
-
-                    //add the dealer back to the dealers collection
-                    dealers.AddOrUpdate(dealer.DealerId, dealer, (key, existing) =>
+                    dealers.AddOrUpdate(vehicle.DealerId, (key) =>
+                    {
+                        var dealer = client.Get<Dealer>(Configuration.GetDealerUrl(dataset.DataSetId, key)).Result;
+                        dealer.Vehicles.Add(vehicle);
+                        return dealer;
+                    }, (key, existing) =>
                     {
                         existing.Vehicles.Add(vehicle);
                         return existing;
@@ -71,7 +63,6 @@ namespace src
 
             foreach (var item in dealers.Values) dealerList.Add(item);
             return dealerList;
-
         }
 
         private async Task<Status> SubmitAutoChallenge(DataSet dataset, List<Dealer> dealers)
